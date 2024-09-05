@@ -1,10 +1,8 @@
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
-from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
-
-from datetime import datetime, date, timedelta
-import requests 
 from google.cloud import bigquery
+import requests 
+from datetime import datetime, date, timedelta
 import os 
 
 
