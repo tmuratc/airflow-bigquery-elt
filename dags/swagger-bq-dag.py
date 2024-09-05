@@ -1,7 +1,8 @@
 from airflow import DAG
-from airflow.utils.task_group import TaskGroup
 from airflow.operators.python_operator import PythonOperator
-from datetime import datetime, date
+from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
+
+from datetime import datetime, date, timedelta
 import requests 
 from google.cloud import bigquery
 import os 
@@ -9,7 +10,7 @@ import os
 
 default_args = {
     'owner': 'your_name',
-    'start_date': datetime(2024, 9, 4),
+    'start_date': datetime(2024, 9, 5),
     'retries': 1,
 }
 
@@ -62,7 +63,6 @@ def load_data_to_bigquery(**kwargs):
         return 
     try : 
         client = bigquery.Client()
-
         # Constructing a TableReference object
         table_ref = bigquery.TableReference.from_string(
             f"{table_dict["project_id"]}.{table_dict["dataset_id"]}.{table_dict["table_id"]}") 
@@ -95,7 +95,25 @@ def load_data_to_bigquery(**kwargs):
     task_id = kwargs['task_instance'].task_id
     kwargs['ti'].xcom_push(key=f"{task_id}_status", value={"success": load_success})
 
+def run_bq_query(**kwargs): 
+    query = kwargs.get("query")
+    client = bigquery.Client() 
+    query_job = client.query(query)
+    query_job.result()
 
+##########################################################################
+PROJECT_ID = os.getenv("PROJECT_ID")
+DATASET_ID = os.getenv("DATASET_ID")
+FINAL_TABLE = os.getenv("FINAL_TABLE")
+
+URL_1 = os.getenv("URL_1")
+URL_2 = os.getenv("URL_2")
+URL_3 = os.getenv("URL_3") 
+
+STAGING_TABLE_1 = os.getenv("STAGING_TABLE_1")
+STAGING_TABLE_2 = os.getenv("STAGING_TABLE_2")
+STAGING_TABLE_3 = os.getenv("STAGING_TABLE_3")
+##########################################################################
 with DAG('swagger_bq_pipeline',
          default_args=default_args,
          schedule_interval='@daily',
@@ -105,16 +123,16 @@ with DAG('swagger_bq_pipeline',
     extract_installs = PythonOperator(
         task_id = "extract_installs",
         python_callable = fetch_from_api, 
-        op_kwargs = {"api_url": os.getenv("URL_1")}, 
+        op_kwargs = {"api_url": URL_1}, 
         provide_context = True
     )
     load_installs = PythonOperator(
         task_id = "load_installs", 
         python_callable = load_data_to_bigquery, 
         op_kwargs = {"upstream_extract_task_id": "extract_installs", 
-                    "destination_table": {"project_id": os.getenv("PROJECT_ID"), 
-                                        "dataset_id": os.getenv("DATASET_ID"),
-                                        "table_id": os.getenv("STAGING_TABLE_1")
+                    "destination_table": {"project_id": PROJECT_ID, 
+                                          "dataset_id": DATASET_ID,
+                                          "table_id": STAGING_TABLE_1
                                         }
                     },
         provide_context = True
@@ -123,7 +141,7 @@ with DAG('swagger_bq_pipeline',
     extract_events = PythonOperator(
         task_id = "extract_events",
         python_callable = fetch_from_api, 
-        op_kwargs = {"api_url": os.getenv("URL_2")}, 
+        op_kwargs = {"api_url": URL_2}, 
         provide_context = True
     )
     load_events = PythonOperator(
@@ -132,16 +150,16 @@ with DAG('swagger_bq_pipeline',
         provide_context = True,
         op_kwargs = {"upstream_extract_task_id": "extract_events", 
                     "destination_table": {
-                        "project_id": os.getenv("PROJECT_ID"), 
-                        "dataset_id": os.getenv("DATASET_ID"),
-                        "table_id": os.getenv("STAGING_TABLE_2")
+                        "project_id": PROJECT_ID, 
+                        "dataset_id": DATASET_ID,
+                        "table_id": STAGING_TABLE_2
                                             }
                     }
     )
     extract_network_costs = PythonOperator(
         task_id = "extract_network_costs",
         python_callable = fetch_from_api, 
-        op_kwargs = {"api_url": os.getenv("URL_3"), "params":{"cost_date": date.today()} }, 
+        op_kwargs = {"api_url": URL_3, "params":{"cost_date": date.today()-timedelta(days=1)} }, 
         provide_context = True
     )
     load_network_costs = PythonOperator(
@@ -150,13 +168,75 @@ with DAG('swagger_bq_pipeline',
         provide_context = True,
         op_kwargs = {"upstream_extract_task_id": "extract_network_costs", 
                     "destination_table": {
-                        "project_id": os.getenv("PROJECT_ID"), 
-                        "dataset_id": os.getenv("DATASET_ID"),
-                        "table_id": os.getenv("STAGING_TABLE_3")
-                                            }
+                        "project_id": PROJECT_ID, 
+                        "dataset_id": DATASET_ID,
+                        "table_id": STAGING_TABLE_3
+                                        }
                     }
+    )
+    
+    query = """
+CREATE OR REPLACE TABLE `{PROJECT_ID}.{DATASET_ID}.{FINAL_TABLE}` AS
+
+with modified_events as (
+select user_id, date(event_ts) as event_day, event_name,
+       case when event_name = "GameStart" THEN 1 else 0 
+       end game_start_count,
+
+       case when ad_type = "interstitial" THEN ad_revenue else 0 
+       end interstitial_revenue, 
+
+       case when ad_type = "banner" THEN ad_revenue else 0 
+       end banner_revenue, 
+
+       case when ad_type = "rewarded" THEN ad_revenue else 0 
+       end rewarded_revenue,  
+from `{PROJECT_ID}.{DATASET_ID}.{STAGING_TABLE_2}` 
+), 
+user_facts as ( 
+  select me.*, date(ins.installed_at) as install_day, ins.network_name, ins.campaign_name, 
+  from modified_events me
+  left join `{PROJECT_ID}.{DATASET_ID}.{STAGING_TABLE_1}` ins on ins.user_id = me.user_id 
+),
+day_summary as (
+select install_day, network_name, campaign_name, 
+      count(distinct user_id) as install_count, 
+      sum(game_start_count) as game_start_count, 
+      sum(interstitial_revenue) as interstitial_revenue, 
+      sum(banner_revenue) as banner_revenue, 
+      sum(rewarded_revenue) as rewarded_revenue, 
+from user_facts
+group by 1,2,3 
+),
+costs as ( 
+  select date(nc.date) as cost_day, nc.network_name, nc.campaign_name, 
+  sum(cost) as cost_sum
+  from `{PROJECT_ID}.{DATASET_ID}.{STAGING_TABLE_3}` nc
+  group by 1,2,3
+), 
+final as (
+  select ds.*, c.cost_sum as cost
+  from day_summary ds
+  left join costs c on c.cost_day = ds.install_day and 
+                      c.network_name = ds.network_name and 
+                      c.campaign_name = ds.campaign_name
+) 
+select * from final 
+""".format(PROJECT_ID=PROJECT_ID, 
+           DATASET_ID=DATASET_ID, 
+           FINAL_TABLE=FINAL_TABLE, 
+           STAGING_TABLE_1 = STAGING_TABLE_1, 
+           STAGING_TABLE_2 = STAGING_TABLE_2, 
+           STAGING_TABLE_3 = STAGING_TABLE_3)
+    
+    bq_transform_data = PythonOperator(
+        task_id = "bq_transform_data", 
+        python_callable = run_bq_query,
+        op_kwargs = {"query": query}, 
+        provide_context = True
     )
 
     extract_installs>>load_installs
     extract_events>>load_events
-    extract_network_costs>>load_network_costs
+    extract_network_costs>>load_network_costs 
+    [load_installs, load_events, load_network_costs]>>bq_transform_data
