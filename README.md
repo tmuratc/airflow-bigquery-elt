@@ -21,7 +21,7 @@ To clone this repository, use the following command:
 git clone https://github.com/tmuratcamli/Airflow-Api-BigQuery.git
 ````
 
-Update first path oh this line in docker-compose file by replacing with path you store GCP key. 
+Update first path of this line in docker-compose file by replacing with path you store GCP key. 
 
 ```bash
 absolute/path/to/your/gcp/key:/opt/airflow/gcp_key.json
