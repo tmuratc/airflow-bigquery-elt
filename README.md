@@ -27,9 +27,10 @@ Update this line on volumes in docker-compose-dev.yaml
 absolute/path/to/your/gcp/key:/opt/airflow/gcp_key.json
 ````
 
-Change .envexample extension as .env and update variables according to yours.
+Change .envexample extension as .env and update variables according to yours. Followings are essential to run smoothly; 
 ```bash
-GOOGLE_APPLICATION_CREDENTIALS = "this is the only placehoolder that you have to change, others are optional"
+PROJECT_ID = "your_gcp_project_id"
+DATASET_ID = "your_dataset_id"
 ````
 
 To initialize Airflow inside docker container, run following command:
