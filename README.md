@@ -22,7 +22,15 @@ git clone https://github.com/tmuratcamli/Airflow-Api-BigQuery.git
 ````
 
 Update this line on volumes in docker-compose-dev.yaml
-- absolute/path/to/your/gcp/key:/opt/airflow/gcp_key.json
+
+```bash
+absolute/path/to/your/gcp/key:/opt/airflow/gcp_key.json
+````
+
+Change .envexample extension as .env and update variables according to yours.
+```bash
+GOOGLE_APPLICATION_CREDENTIALS = "this is the only placehoolder that you have to change, others are optional"
+````
 
 To initialize Airflow inside docker container, run following command:
 
@@ -33,4 +41,12 @@ docker-compose -f docker-compose-dev.yaml up airflow-init
 To start Airflow components services such as webserver, scheduler, worker, triggerer, run following command: 
 
 ```bash
-docker-compose -f docker-compose-dev.yaml up -d 
+docker-compose -f docker-compose-dev.yaml up -d
+```
+
+To see Airflow UI on your [localhost.](http://localhost:8080) Sign in with password and user in .env file;
+
+ ```bash
+_AIRFLOW_WWW_USER_USERNAME='your_web_ui_username'
+_AIRFLOW_WWW_USER_PASSWORD='your_web_ui_password'
+```
