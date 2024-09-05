@@ -5,13 +5,11 @@ import requests
 from datetime import datetime, date, timedelta
 import os 
 
-
 default_args = {
-    'owner': 'your_name',
+    'owner': os.getenv("OWNER"),
     'start_date': datetime(2024, 9, 5),
     'retries': 1,
 }
-
 
 def fetch_from_api(api_url, params=None, **kwargs):
     """
@@ -68,7 +66,7 @@ def load_data_to_bigquery(**kwargs):
         # Constructing a LoadJobConfig object and set attributes
         job_config = bigquery.LoadJobConfig()
         job_config.create_disposition = "CREATE_IF_NEEDED"
-        job_config.write_disposition = "WRITE_APPEND" 
+        job_config.write_disposition = "WRITE_TRUNCATE" 
         job_config.source_format = "NEWLINE_DELIMITED_JSON"
         job_config.autodetect = True 
 
@@ -94,11 +92,20 @@ def load_data_to_bigquery(**kwargs):
     kwargs['ti'].xcom_push(key=f"{task_id}_status", value={"success": load_success})
 
 def run_bq_query(**kwargs): 
-    query = kwargs.get("query")
-    client = bigquery.Client() 
-    query_job = client.query(query)
-    query_job.result()
+    success = False
+    try : 
+        query = kwargs.get("query")
+        client = bigquery.Client() 
+        query_job = client.query(query)
+        query_job.result() 
+        print("Query job is finished.")
+        success = True
 
+    except Exception as e: 
+        print(f"Query job is failed. Info: {e}") 
+
+    task_id = kwargs['task_instance'].task_id
+    kwargs['ti'].xcom_push(key=f"{task_id}_status", value={"success": success}) 
 ##########################################################################
 PROJECT_ID = os.getenv("PROJECT_ID")
 DATASET_ID = os.getenv("DATASET_ID")
@@ -117,7 +124,6 @@ with DAG('swagger_bq_pipeline',
          schedule_interval='@daily',
          catchup=False) as dag:
 
-   
     extract_installs = PythonOperator(
         task_id = "extract_installs",
         python_callable = fetch_from_api, 
@@ -198,17 +204,17 @@ user_facts as (
 ),
 day_summary as (
 select install_day, network_name, campaign_name, 
-      count(distinct user_id) as install_count, 
-      sum(game_start_count) as game_start_count, 
-      sum(interstitial_revenue) as interstitial_revenue, 
-      sum(banner_revenue) as banner_revenue, 
-      sum(rewarded_revenue) as rewarded_revenue, 
+      cast(count(distinct user_id) as integer) as install_count, 
+      cast(sum(game_start_count) as integer) as game_start_count, 
+      cast(sum(interstitial_revenue) as integer) as interstitial_revenue, 
+      cast(sum(banner_revenue) as integer) as banner_revenue, 
+      cast(sum(rewarded_revenue) as integer) as rewarded_revenue,
 from user_facts
 group by 1,2,3 
 ),
 costs as ( 
   select date(nc.date) as cost_day, nc.network_name, nc.campaign_name, 
-  sum(cost) as cost_sum
+  cast(sum(cost) as integer) as cost_sum
   from `{PROJECT_ID}.{DATASET_ID}.{STAGING_TABLE_3}` nc
   group by 1,2,3
 ), 
