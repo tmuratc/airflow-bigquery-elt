@@ -8,7 +8,7 @@ import os
 default_args = {
     'owner': os.getenv("OWNER"),
     'start_date': datetime(2024, 9, 5),
-    'retries': 1,
+    'retries': 1
 }
 
 def fetch_from_api(api_url, params=None, **kwargs):
@@ -122,6 +122,7 @@ STAGING_TABLE_3 = os.getenv("STAGING_TABLE_3")
 with DAG('swagger_bq_pipeline',
          default_args=default_args,
          schedule_interval='@daily',
+         schedule_interval='0 12 * * *', 
          catchup=False) as dag:
 
     extract_installs = PythonOperator(
