@@ -1,5 +1,5 @@
 ## SWAGGER API-BIGQUERY DATA PIPELINE ORCHESTRATION
-- A daily pipeline that extracts data from 3 endpoint and save final results to BigQuery table.
+- A daily pipeline that extracts data from 3 endpoints and save final results to BigQuery table.
 - DAG diagram is specified in jpeg file.
 - Project aims to reusability on staging process for any given 3 endpoints.
 
@@ -8,7 +8,7 @@
 A GCP Project with followings; 
 - A BigQuery Dataset
 - A service account with BigQuery Admin Role
-- Key file for service account.
+- Key file for service account
 
 
 ## Installation with Docker-Compose 
@@ -18,7 +18,7 @@ To check apache/airflow:2.9.1 in Docker Hub [click here.](https://hub.docker.com
 To clone this repository, use the following command:
 
 ```bash
-git clone https://github.com/your-username/your-repository.git
+git clone https://github.com/tmuratcamli/Airflow-Api-BigQuery.git
 ````
 
 Update this line on volumes in docker-compose-dev.yaml
