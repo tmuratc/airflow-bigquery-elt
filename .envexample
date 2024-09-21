@@ -7,14 +7,14 @@ POSTGRES_DB='postgres_dv'
 _AIRFLOW_WWW_USER_USERNAME='your_web_ui_username'
 _AIRFLOW_WWW_USER_PASSWORD='your_web_ui_password'
 AIRFLOW_UID=50000
-STAGING_TABLE_1 = "staging_1"
-STAGING_TABLE_2 = "staging_2"
-STAGING_TABLE_3 = "staging_3"
+STAGING_TABLE_1 = "installs"
+STAGING_TABLE_2 = "events"
+STAGING_TABLE_3 = "network_costs"
 FINAL_TABLE = "final_results"
 PROJECT_ID = "your_gcp_project_id"
 DATASET_ID = "your_dataset_id"
-URL_1="source_url_1"
-URL_2="source_url_2"
-URL_3="source_url_3"
+URL_1="https://dataeng-interview-project-zomet35f7q-uc.a.run.app/installs"
+URL_2="https://dataeng-interview-project-zomet35f7q-uc.a.run.app/events"
+URL_3="https://dataeng-interview-project-zomet35f7q-uc.a.run.app/network_cost?cost_date={cost_date}"
 
 
