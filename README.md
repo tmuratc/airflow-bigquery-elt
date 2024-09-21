@@ -1,8 +1,13 @@
-## SWAGGER API-BIGQUERY DATA PIPELINE ORCHESTRATION
-- A daily pipeline that extracts data from 3 endpoints and save final results to BigQuery table.
-- DAG diagram is specified in jpeg file.
-- Project aims to reusability on staging process for any given 3 endpoints.
+# API-BIGQUERY ELT ORCHESTRATION
+ ![Architecture Diagram](./architecture-diagram.png)
 
+## Description
+- A daily pipeline that extracts data from 3 endpoints and save final results to BigQuery table.
+- Swagger URL is used to extract data.
+- Project can be adapted to other use cases by modifying endpoint urls and query. 
+
+## DAG
+![DAG Diagram](./DAG.png)
 
 ## Prerequisites
 A GCP Project with followings; 
