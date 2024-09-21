@@ -1,12 +1,12 @@
 # API-BIGQUERY ELT ORCHESTRATION
- ![Architecture Diagram](./architecture-diagram.png)
+ ![Architecture Diagram](./readme_images/architecture-diagram.png)
 
 ## Description
 - A daily pipeline that extracts data from 3 endpoints and save final results to BigQuery table.
 - Swagger API is used to extract data.
 
 ## DAG
-![DAG Diagram](./DAG.png)
+![DAG Diagram](./readme_images/DAG.png)
 
 ## SCHEMAS
 
@@ -82,7 +82,7 @@
 ]
 ```
 ### 4. Final Table
-![Final Table Schema](./final-table-schema.png)
+![Final Table Schema](./readme_images/final-table-schema.png)
 
 
 ## Prerequisites
